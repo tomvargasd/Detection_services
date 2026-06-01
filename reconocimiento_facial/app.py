@@ -29,10 +29,14 @@ def profiles():
     conn = database.get_conn()
     if request.method == 'POST':
         nombre = request.form.get('nombre')
-        if nombre:
+        if nombre.strip():
             conn.execute('INSERT INTO Personas (nombre) VALUES (?)', (nombre,))
             conn.commit()
             flash('Persona registrada correctamente.', 'success')
+            conn.close()
+            return redirect(url_for('profiles'))
+        else:
+            flash('El nombre no puede estar vacío.', 'error')
             conn.close()
             return redirect(url_for('profiles'))
 

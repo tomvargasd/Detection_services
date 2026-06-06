@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block title %}FaceID — Detecciones{% endblock %}
+
+{% block content %}
+<div class="page-header flex-between">
+    <div>
+        <h1>Historial de Detecciones</h1>
+        <p>Todas las detecciones faciales registradas por el sistema.</p>
+    </div>
+</div>
+
+<!-- Filter -->
+<div class="card mb-xl" style="animation: fadeInUp 0.4s ease-out;">
+    <form method="GET" action="/detections" class="form-inline">
+        <div class="form-group">
+            <label class="form-label" for="persona_filter">Filtrar por persona</label>
+            <select class="form-control" id="persona_filter" name="persona_id">
+                <option value="">— Todas las personas —</option>
+                <option value="unknown" {% if filter_persona == 'unknown' %}selected{% endif %}>Desconocidos</option>
+                {% for p in personas %}
+                <option value="{{ p['id'] }}" {% if filter_persona == p['id']|string %}selected{% endif %}>{{ p['nombre'] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">🔍 Filtrar</button>
+    </form>
+</div>
+
+{% if detections|length > 0 %}
+<!-- Table View -->
+<div class="table-container" style="animation: fadeInUp 0.5s ease-out 0.1s backwards;">
+    <table>
+        <thead>
+            <tr>
+                <th>Imagen</th>
+                <th>Persona</th>
+                <th>Estado</th>
+                <th>Fecha y Hora</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for det in detections %}
+            <tr>
+                <td>
+                    <img src="/{{ det['ruta_imagen_captura'] }}" alt="Detección" class="detection-thumb" loading="lazy">
+                </td>
+                <td id="td-name-{{ det['id'] }}">
+                    <strong>{{ det['nombre'] if det['nombre'] else 'Desconocido' }}</strong>
+                </td>
+                <td id="td-status-{{ det['id'] }}">
+                    {% if det['nombre'] %}
+                        <span class="badge badge-success">✓ Identificado</span>
+                    {% else %}
+                        <span class="badge badge-warning">? Desconocido</span>
+                    {% endif %}
+                </td>
+                <td class="text-muted">{{ det['fecha_hora'] }}</td>
+                <td>
+                    <button id="btn-unlink-{{ det['id'] }}" class="btn btn-outline btn-sm" onclick="unlinkDetection({{ det['id'] }})" style="{% if not det['nombre'] %}display:none;{% endif %}">❌ Desvincular</button>
+                    <button id="btn-assign-{{ det['id'] }}" class="btn btn-primary btn-sm" onclick="openAssignModal({{ det['id'] }})" style="{% if det['nombre'] %}display:none;{% endif %}">👤 Asignar</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-state">
+    <div class="empty-icon">📊</div>
+    <p>No hay detecciones registradas aún. Analiza un video o usa la cámara para comenzar.</p>
+    <a href="/upload" class="btn btn-primary">🎬 Ir al análisis</a>
+</div>
+{% endif %}
+
+<!-- Assign Modal -->
+<div class="modal-overlay" id="assignModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>Asignar Detección a Perfil</h3>
+            <button class="modal-close" onclick="closeAssignModal()">×</button>
+        </div>
+        <div class="modal-body">
+            <p style="margin-bottom: 12px; color: var(--text-secondary);">Selecciona la persona a la que pertenece este rostro:</p>
+            <input type="hidden" id="currentAssignDetId">
+            <select class="form-control" id="assignPersonaSelect">
+                <option value="">— Seleccionar Persona —</option>
+                {% for p in personas %}
+                <option value="{{ p['id'] }}">{{ p['nombre'] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeAssignModal()">Cancelar</button>
+            <button class="btn btn-primary" onclick="submitAssign()">Guardar Asignación</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function unlinkDetection(detId) {
+        if (!confirm('¿Estás seguro de desvincular este rostro del perfil?')) return;
+        
+        fetch(`/unlink_detection/${detId}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'}
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.ok) {
+                document.getElementById(`td-name-${detId}`).innerHTML = '<strong>Desconocido</strong>';
+                document.getElementById(`td-status-${detId}`).innerHTML = '<span class="badge badge-warning">? Desconocido</span>';
+                document.getElementById(`btn-unlink-${detId}`).style.display = 'none';
+                document.getElementById(`btn-assign-${detId}`).style.display = 'inline-flex';
+            } else {
+                alert('Error al desvincular');
+            }
+        });
+    }
+
+    function openAssignModal(detId) {
+        document.getElementById('currentAssignDetId').value = detId;
+        document.getElementById('assignPersonaSelect').value = '';
+        document.getElementById('assignModal').classList.add('active');
+    }
+
+    function closeAssignModal() {
+        document.getElementById('assignModal').classList.remove('active');
+    }
+
+    function submitAssign() {
+        const detId = document.getElementById('currentAssignDetId').value;
+        const select = document.getElementById('assignPersonaSelect');
+        const personaId = select.value;
+        const personaName = select.options[select.selectedIndex].text;
+        
+        if(!personaId) {
+            alert('Por favor selecciona una persona.');
+            return;
+        }
+
+        fetch(`/assign_detection/${detId}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({persona_id: personaId})
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.ok) {
+                document.getElementById(`td-name-${detId}`).innerHTML = `<strong>${personaName}</strong>`;
+                document.getElementById(`td-status-${detId}`).innerHTML = '<span class="badge badge-success">✓ Identificado</span>';
+                document.getElementById(`btn-unlink-${detId}`).style.display = 'inline-flex';
+                document.getElementById(`btn-assign-${detId}`).style.display = 'none';
+                closeAssignModal();
+            } else {
+                alert('Error al asignar');
+            }
+        });
+    }
+</script>
+{% endblock %}

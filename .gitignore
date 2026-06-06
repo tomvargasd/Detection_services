@@ -4,3 +4,6 @@ venv/
 *.mp4
 *.avif
 *.db
+__pycache__
+yolov8n.pt
+*.pt

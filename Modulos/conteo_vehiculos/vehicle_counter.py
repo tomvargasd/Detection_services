@@ -13,7 +13,8 @@ from Modulos.conteo_vehiculos import database as db
 
 COCO_VEHICLE_IDS = [1, 2, 3, 5, 7]
 
-MODEL_PATH = "yolo11s.pt"
+# inicializo el modelo directo en una carptema models
+MODEL_PATH = "models/yolo11s.pt"
 
 
 def build_region_points(width, height, orientation, position):
@@ -55,12 +56,20 @@ def process_video(
         model=MODEL_PATH,
         classes=COCO_VEHICLE_IDS,
         line_width=2,
-        conf=0.35
+        conf=0.10
     )
 
     frame_count = 0
 
     while cap.isOpened():
+
+        # limite de 10fps
+        if frame_count % int(fps / 20) != 0:
+            cap.grab()
+            frame_count += 1
+            continue
+
+
         if cancel_event and cancel_event.is_set():
             break
 

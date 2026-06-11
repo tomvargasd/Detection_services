@@ -4,8 +4,7 @@ import numpy as np
 import hashlib
 from ultralytics import YOLO
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-ruta_defecto = os.path.join(BASE_DIR, 'yolov8n.pt')
+ruta_defecto = "../../models/yolov8n.pt"
 
 model = YOLO(ruta_defecto)
 print("Modelo cargado correctamente")    

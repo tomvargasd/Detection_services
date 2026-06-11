@@ -14,8 +14,7 @@ from Modulos.conteo_vehiculos import database as db
 COCO_VEHICLE_IDS = [1, 2, 3, 5, 7]
 
 # inicializo el modelo directo en una carptema models
-MODEL_PATH = "yolo11s.pt"
-
+MODEL_PATH = "../../models/yolo11s.pt"
 
 def build_region_points(width, height, orientation, position):
     if orientation == 'horizontal':

@@ -54,6 +54,7 @@ THEME: dict = {
     "danger":          "#ef4444",
     "danger_dark":     "#450a0a",
     "warning":         "#f59e0b",
+    "warning_dark":    "#452d05",
     "info":            "#3b82f6",
     "info_dark":       "#1e3a5f",
 

@@ -40,6 +40,7 @@
             <tr><td>Procesado</td><td>{{ video['processed_at'][:19] if video['processed_at'] else '-' }}</td></tr>
             <tr><td>Línea</td><td>{{ video['line_orientation'].capitalize() }} @ {{ (video['line_position']*100)|int }}%</td></tr>
             <tr><td>Umbral de confianza</td><td>{{ video['conf_threshold'] or 0.35 }}</td></tr>
+            <tr><td>Umbral IOU</td><td>{{ video['iou_threshold'] or 0.5 }}</td></tr>
             {% if video['duration_seconds'] %}
             <tr><td>Duración</td>
                 <td>

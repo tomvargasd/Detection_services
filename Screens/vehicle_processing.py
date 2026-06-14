@@ -161,7 +161,7 @@ class VehicleProcessingScreen(tk.Frame):
         self._build_progress_section(panel)
 
     def _build_config_section(self, parent):
-        sec = tk.LabelFrame(parent, text="📐  Configuración de línea",
+        sec = tk.LabelFrame(parent, text="📐  Configuración",
                             font=FONTS["subheading"],
                             bg=THEME["bg_surface"], fg=THEME["text_primary"],
                             padx=12, pady=10,
@@ -170,7 +170,7 @@ class VehicleProcessingScreen(tk.Frame):
         sec.pack(fill="x", pady=(0, 10))
 
         orient_frame = tk.Frame(sec, bg=THEME["bg_surface"])
-        orient_frame.pack(fill="x", pady=(0, 8))
+        orient_frame.pack(fill="x", pady=(0, 6))
 
         tk.Label(orient_frame, text="Orientación:",
                  font=FONTS["label"],
@@ -199,7 +199,7 @@ class VehicleProcessingScreen(tk.Frame):
         vert_rb.pack(side="left")
 
         pos_frame = tk.Frame(sec, bg=THEME["bg_surface"])
-        pos_frame.pack(fill="x")
+        pos_frame.pack(fill="x", pady=(0, 6))
 
         tk.Label(pos_frame, text="Posición:",
                  font=FONTS["label"],
@@ -226,6 +226,64 @@ class VehicleProcessingScreen(tk.Frame):
         self._pos_label.pack(side="left")
 
         self._position_var.trace_add("write", self._on_position_change)
+
+        conf_frame = tk.Frame(sec, bg=THEME["bg_surface"])
+        conf_frame.pack(fill="x", pady=(0, 6))
+
+        tk.Label(conf_frame, text="Confianza:",
+                 font=FONTS["label"],
+                 bg=THEME["bg_surface"], fg=THEME["text_secondary"]).pack(side="left", padx=(0, 10))
+
+        self._conf_var = tk.DoubleVar(value=0.35)
+        self._conf_slider = tk.Scale(conf_frame, from_=0.1, to=0.9,
+                                      resolution=0.05,
+                                      orient="horizontal",
+                                      variable=self._conf_var,
+                                      length=140,
+                                      bg=THEME["bg_surface"],
+                                      fg=THEME["text_primary"],
+                                      troughcolor=THEME["bg_card"],
+                                      activebackground=THEME["accent"],
+                                      highlightthickness=0,
+                                      font=FONTS["small"])
+        self._conf_slider.pack(side="left", padx=(0, 6))
+
+        self._conf_label = tk.Label(conf_frame, text="0.35",
+                                     font=FONTS["small_bold"],
+                                     bg=THEME["bg_surface"],
+                                     fg=THEME["accent"])
+        self._conf_label.pack(side="left")
+
+        self._conf_var.trace_add("write", self._on_conf_change)
+
+        iou_frame = tk.Frame(sec, bg=THEME["bg_surface"])
+        iou_frame.pack(fill="x")
+
+        tk.Label(iou_frame, text="IOU:",
+                 font=FONTS["label"],
+                 bg=THEME["bg_surface"], fg=THEME["text_secondary"]).pack(side="left", padx=(0, 10))
+
+        self._iou_var = tk.DoubleVar(value=0.5)
+        self._iou_slider = tk.Scale(iou_frame, from_=0.1, to=0.9,
+                                     resolution=0.05,
+                                     orient="horizontal",
+                                     variable=self._iou_var,
+                                     length=140,
+                                     bg=THEME["bg_surface"],
+                                     fg=THEME["text_primary"],
+                                     troughcolor=THEME["bg_card"],
+                                     activebackground=THEME["accent"],
+                                     highlightthickness=0,
+                                     font=FONTS["small"])
+        self._iou_slider.pack(side="left", padx=(0, 6))
+
+        self._iou_label = tk.Label(iou_frame, text="0.50",
+                                    font=FONTS["small_bold"],
+                                    bg=THEME["bg_surface"],
+                                    fg=THEME["accent"])
+        self._iou_label.pack(side="left")
+
+        self._iou_var.trace_add("write", self._on_iou_change)
 
     def _build_file_section(self, parent):
         sec = tk.LabelFrame(parent, text="📁  Archivo de video",
@@ -280,6 +338,17 @@ class VehicleProcessingScreen(tk.Frame):
                                       state="disabled",
                                       command=self._cancel_processing)
         self._cancel_btn.pack(side="left")
+
+        self._restart_btn = tk.Button(btn_frame, text="🔄  Reiniciar",
+                                       font=FONTS["button"],
+                                       bg=THEME["warning_dark"], fg=THEME["text_warning"],
+                                       activebackground=THEME["warning"],
+                                       activeforeground="#fff",
+                                       relief="flat", bd=0, cursor="hand2",
+                                       padx=14, pady=10,
+                                       state="disabled",
+                                       command=self._restart_processing)
+        self._restart_btn.pack(side="left", padx=(8, 0))
 
         self._dashboard_btn = tk.Button(btn_frame, text="📊  Ver Dashboard",
                                          font=FONTS["small_bold"],
@@ -375,6 +444,14 @@ class VehicleProcessingScreen(tk.Frame):
         val = int(self._position_var.get() * 100)
         self._pos_label.configure(text=f"{val}%")
 
+    def _on_conf_change(self, *args):
+        val = self._conf_var.get()
+        self._conf_label.configure(text=f"{val:.2f}")
+
+    def _on_iou_change(self, *args):
+        val = self._iou_var.get()
+        self._iou_label.configure(text=f"{val:.2f}")
+
     def _select_video(self):
         file_path = filedialog.askopenfilename(
             title="Seleccionar video",
@@ -462,11 +539,16 @@ class VehicleProcessingScreen(tk.Frame):
         import shutil
         shutil.copy2(self._current_video_path, upload_path)
 
+        conf_threshold = self._conf_var.get()
+        iou_threshold = self._iou_var.get()
+
         self._current_video_id = db.insert_video(
             filename=filename,
             original_filename=original_name,
             orientation=orientation,
             position=position,
+            conf_threshold=conf_threshold,
+            iou_threshold=iou_threshold,
         )
 
         db.update_video_status(self._current_video_id, 'processing')
@@ -476,6 +558,7 @@ class VehicleProcessingScreen(tk.Frame):
 
         self._start_btn.configure(state="disabled", text="⏳  Procesando...")
         self._cancel_btn.configure(state="normal")
+        self._restart_btn.configure(state="disabled")
         self._dashboard_btn.configure(state="disabled")
 
         for label in self._counter_labels.values():
@@ -487,12 +570,12 @@ class VehicleProcessingScreen(tk.Frame):
 
         self._thread = threading.Thread(
             target=self._run_processing,
-            args=(str(upload_path), orientation, position),
+            args=(str(upload_path), orientation, position, conf_threshold, iou_threshold),
             daemon=True,
         )
         self._thread.start()
 
-    def _run_processing(self, video_path, orientation, position):
+    def _run_processing(self, video_path, orientation, position, conf_threshold=0.35, iou_threshold=0.5):
         try:
             process_video(
                 video_path=video_path,
@@ -503,6 +586,8 @@ class VehicleProcessingScreen(tk.Frame):
                 counts_callback=lambda c: self.app.after(0, self._on_counts, c),
                 cancel_event=self._cancel_event,
                 video_id=self._current_video_id,
+                conf_threshold=conf_threshold,
+                iou_threshold=iou_threshold,
             )
             if self._cancel_event and self._cancel_event.is_set():
                 self.app.after(0, self._on_cancelled)
@@ -513,7 +598,7 @@ class VehicleProcessingScreen(tk.Frame):
 
     def _on_frame(self, frame):
         self._frames_processed += 1
-        if self._frames_processed % 3 == 0:
+        if self._frames_processed % 2 == 0:
             self._frames_displayed += 1
             self._display_frame(frame)
 
@@ -532,9 +617,12 @@ class VehicleProcessingScreen(tk.Frame):
         self._total_label.configure(text=str(total))
 
     def _on_complete(self):
+        if not self._processing:
+            return
         self._processing = False
         self._start_btn.configure(state="normal", text="▶  Iniciar Conteo")
         self._cancel_btn.configure(state="disabled")
+        self._restart_btn.configure(state="normal")
         self._dashboard_btn.configure(state="normal")
         self._progress_var.set(100)
         self._progress_label.configure(text="100%")
@@ -558,9 +646,12 @@ class VehicleProcessingScreen(tk.Frame):
             tags="overlay")
 
     def _on_cancelled(self):
+        if not self._processing:
+            return
         self._processing = False
         self._start_btn.configure(state="normal", text="▶  Iniciar Conteo")
         self._cancel_btn.configure(state="disabled")
+        self._restart_btn.configure(state="normal")
         self._dashboard_btn.configure(state="normal")
         self._status_label.configure(
             text="⏹️  Procesamiento cancelado",
@@ -575,9 +666,13 @@ class VehicleProcessingScreen(tk.Frame):
             tags="overlay")
 
     def _on_error(self, error_msg):
+        if not self._processing:
+            return
         self._processing = False
         self._start_btn.configure(state="normal", text="▶  Iniciar Conteo")
         self._cancel_btn.configure(state="disabled")
+        self._restart_btn.configure(state="normal")
+        self._dashboard_btn.configure(state="normal")
         self._status_label.configure(
             text=f"❌  Error: {error_msg}",
             fg=THEME["text_danger"])
@@ -597,6 +692,13 @@ class VehicleProcessingScreen(tk.Frame):
             self._cancel_event.set()
         self._cancel_btn.configure(state="disabled")
         self._status_label.configure(text="⏹️  Cancelando...", fg=THEME["text_warning"])
+
+    def _restart_processing(self):
+        if self._cancel_event:
+            self._cancel_event.set()
+        self._restart_btn.configure(state="disabled")
+        self._status_label.configure(text="🔄  Reiniciando...", fg=THEME["text_info"])
+        self.app.after(500, self._start_processing)
 
     def _go_back(self):
         self._cancel_processing()

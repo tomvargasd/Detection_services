@@ -1,6 +1,7 @@
 import os
 import sys
 import uuid
+import time
 import cv2
 from pathlib import Path
 from ultralytics import solutions
@@ -33,8 +34,10 @@ def process_video(
     frame_callback=None,
     counts_callback=None,
     cancel_event=None,
+    pause_event=None,
     video_id=None,
     conf_threshold=0.35,
+    iou_threshold=0.5,
 ):
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
@@ -57,6 +60,7 @@ def process_video(
         classes=COCO_VEHICLE_IDS,
         line_width=2,
         conf=conf_threshold,
+        iou=iou_threshold,
     )
 
     frame_count = 0
@@ -70,6 +74,11 @@ def process_video(
 
         if cancel_event and cancel_event.is_set():
             break
+
+        while pause_event and pause_event.is_set():
+            if cancel_event and cancel_event.is_set():
+                break
+            time.sleep(0.1)
 
         ret, frame = cap.read()
         if not ret:
@@ -143,6 +152,7 @@ def process_video_standalone(
     orientation='horizontal',
     position=0.5,
     conf_threshold=0.35,
+    iou_threshold=0.5,
 ):
     db.init_db()
 
@@ -155,6 +165,7 @@ def process_video_standalone(
         orientation=orientation,
         position=position,
         conf_threshold=conf_threshold,
+        iou_threshold=iou_threshold,
     )
 
     db.update_video_status(video_id, 'processing')
@@ -166,6 +177,7 @@ def process_video_standalone(
             position=position,
             video_id=video_id,
             conf_threshold=conf_threshold,
+            iou_threshold=iou_threshold,
         )
         print(f"Procesamiento completado: {counts}")
         return video_id, counts
@@ -181,6 +193,7 @@ if __name__ == '__main__':
     parser.add_argument('--orientation', choices=['horizontal', 'vertical'], default='horizontal')
     parser.add_argument('--position', type=float, default=0.5)
     parser.add_argument('--conf', type=float, default=0.35)
+    parser.add_argument('--iou', type=float, default=0.5)
     args = parser.parse_args()
 
     db.init_db()
@@ -189,4 +202,5 @@ if __name__ == '__main__':
         args.orientation,
         args.position,
         conf_threshold=args.conf,
+        iou_threshold=args.iou,
     )

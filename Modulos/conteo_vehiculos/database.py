@@ -51,6 +51,10 @@ def init_db():
             c.execute(f'ALTER TABLE Videos ADD COLUMN {col} REAL DEFAULT 0.35' if col == 'conf_threshold' else f'ALTER TABLE Videos ADD COLUMN {col} INTEGER DEFAULT 0')
         except Exception:
             pass
+    try:
+        c.execute('ALTER TABLE Videos ADD COLUMN iou_threshold REAL DEFAULT 0.5')
+    except Exception:
+        pass
     for col in ['entry_count', 'exit_count']:
         try:
             c.execute(f'ALTER TABLE VehicleCounts ADD COLUMN {col} INTEGER DEFAULT 0')
@@ -61,12 +65,12 @@ def init_db():
     conn.commit()
     conn.close()
 
-def insert_video(filename, original_filename, orientation, position, conf_threshold=0.35):
+def insert_video(filename, original_filename, orientation, position, conf_threshold=0.35, iou_threshold=0.5):
     conn = get_conn()
     c = conn.cursor()
     c.execute(
-        'INSERT INTO Videos (filename, original_filename, line_orientation, line_position, conf_threshold, status) VALUES (?, ?, ?, ?, ?, ?)',
-        (filename, original_filename, orientation, position, conf_threshold, 'pending')
+        'INSERT INTO Videos (filename, original_filename, line_orientation, line_position, conf_threshold, iou_threshold, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        (filename, original_filename, orientation, position, conf_threshold, iou_threshold, 'pending')
     )
     conn.commit()
     video_id = c.lastrowid

@@ -63,6 +63,8 @@ img{max-width:100%;height:auto}
 .btn-success:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(16,185,129,0.4);color:white}
 .btn-danger{background:var(--gradient-danger);color:white;box-shadow:0 4px 12px rgba(239,68,68,0.3)}
 .btn-danger:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(239,68,68,0.4);color:white}
+.btn-warning{background:linear-gradient(135deg,#f59e0b,#d97706);color:white;box-shadow:0 4px 12px rgba(245,158,11,0.3)}
+.btn-warning:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(245,158,11,0.4);color:white}
 .btn-outline{background:transparent;color:var(--accent-primary-light);border:1px solid var(--border-color-hover)}
 .btn-outline:hover{background:rgba(124,58,237,0.1);border-color:var(--accent-primary);color:var(--accent-primary-light)}
 .btn-sm{padding:8px 16px;font-size:0.8rem}

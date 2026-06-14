@@ -38,6 +38,8 @@ VEHICLE_LABELS = {
 }
 VEHICLE_ORDER = ['car', 'motorcycle', 'bus', 'truck', 'bicycle']
 
+_job_lock = threading.Lock()
+
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -83,6 +85,7 @@ def processing():
         orientation = request.form.get('orientation', 'horizontal')
         position = float(request.form.get('position', 0.5))
         conf_threshold = float(request.form.get('conf_threshold', 0.35))
+        iou_threshold = float(request.form.get('iou_threshold', 0.5))
 
         db.init_db()
         video_id = db.insert_video(
@@ -91,20 +94,31 @@ def processing():
             orientation=orientation,
             position=position,
             conf_threshold=conf_threshold,
+            iou_threshold=iou_threshold,
         )
         db.update_video_status(video_id, 'processing')
 
         job_id = str(uuid.uuid4())
+        cancel_ev = threading.Event()
+        pause_ev = threading.Event()
         job_store[job_id] = {
             "status": "processing",
             "progress": 0,
             "video_id": video_id,
+            "video_path": filepath,
+            "orientation": orientation,
+            "position": position,
+            "conf_threshold": conf_threshold,
+            "iou_threshold": iou_threshold,
             "results": None,
+            "cancel_event": cancel_ev,
+            "pause_event": pause_ev,
+            "frame_bytes": None,
         }
 
         thread = threading.Thread(
             target=process_video_async,
-            args=(filepath, job_id, orientation, position, conf_threshold, video_id),
+            args=(filepath, job_id, orientation, position, conf_threshold, iou_threshold, video_id, cancel_ev, pause_ev),
             daemon=True,
         )
         thread.start()
@@ -123,9 +137,11 @@ def processing_status(job_id):
         return redirect(url_for('processing'))
 
     job = job_store[job_id]
+    paused = job.get('pause_event', threading.Event()).is_set()
     return render_template('processing_status.html',
                            job_id=job_id,
-                           job=job)
+                           job=job,
+                           paused=paused)
 
 
 @app.route('/job_progress/<job_id>')
@@ -147,6 +163,112 @@ def job_progress(job_id):
             time.sleep(0.5)
 
     return Response(generate(), mimetype='text/event-stream')
+
+
+@app.route('/video_feed/<job_id>')
+def video_feed(job_id):
+    def generate():
+        last_frame = None
+        stale_count = 0
+        while True:
+            if job_id not in job_store:
+                break
+            job = job_store[job_id]
+            frame_bytes = job.get('frame_bytes')
+            if frame_bytes and frame_bytes != last_frame:
+                last_frame = frame_bytes
+                stale_count = 0
+                yield (b'--frame\r\n'
+                       b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+            else:
+                if job['status'] in ('done', 'error', 'cancelled'):
+                    if frame_bytes and frame_bytes == last_frame:
+                        stale_count += 1
+                        if stale_count < 10:
+                            yield (b'--frame\r\n'
+                                   b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+                            time.sleep(0.5)
+                            continue
+                    break
+                time.sleep(0.05)
+
+    return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+
+@app.route('/api/control/<job_id>', methods=['POST'])
+def control_job(job_id):
+    if job_id not in job_store:
+        return jsonify({"error": "Job no encontrado"}), 404
+
+    action = request.json.get('action', '')
+    job = job_store[job_id]
+
+    if action == 'pause':
+        pause_ev = job.get('pause_event')
+        if pause_ev:
+            pause_ev.set()
+            with _job_lock:
+                job['status'] = 'paused'
+        return jsonify({"status": "paused"})
+
+    elif action == 'resume':
+        pause_ev = job.get('pause_event')
+        if pause_ev:
+            pause_ev.clear()
+            with _job_lock:
+                job['status'] = 'processing'
+        return jsonify({"status": "resumed"})
+
+    elif action == 'cancel':
+        cancel_ev = job.get('cancel_event')
+        if cancel_ev:
+            cancel_ev.set()
+        pause_ev = job.get('pause_event')
+        if pause_ev:
+            pause_ev.clear()
+        with _job_lock:
+            job['status'] = 'cancelled'
+        if job.get('video_id'):
+            db.update_video_status(job['video_id'], 'cancelled')
+        return jsonify({"status": "cancelled"})
+
+    elif action == 'restart':
+        cancel_ev = job.get('cancel_event')
+        if cancel_ev:
+            cancel_ev.set()
+        pause_ev = job.get('pause_event')
+        if pause_ev:
+            pause_ev.clear()
+
+        video_path = job.get('video_path')
+        orientation = job.get('orientation', 'horizontal')
+        position = job.get('position', 0.5)
+        conf_threshold = job.get('conf_threshold', 0.35)
+        iou_threshold = job.get('iou_threshold', 0.5)
+        video_id = job.get('video_id')
+
+        new_cancel = threading.Event()
+        new_pause = threading.Event()
+
+        with _job_lock:
+            job['cancel_event'] = new_cancel
+            job['pause_event'] = new_pause
+            job['status'] = 'processing'
+            job['progress'] = 0
+            job['counts'] = None
+            job['frame_bytes'] = None
+            job['results'] = None
+
+        thread = threading.Thread(
+            target=process_video_async,
+            args=(video_path, job_id, orientation, position, conf_threshold, iou_threshold, video_id, new_cancel, new_pause),
+            daemon=True,
+        )
+        thread.start()
+
+        return jsonify({"status": "restarted"})
+
+    return jsonify({"error": f"Acción desconocida: {action}"}), 400
 
 
 @app.route('/results/<int:video_id>')
@@ -215,7 +337,7 @@ def preview_frame():
                     cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
     else:
         x = int(w * position)
-        cv2.line(frame, (x, 0), (x, h), (0, 255, 0), 3)
+        cv2.line(frame, (x, 0), (x, h), (x, 0), 3)
         cv2.putText(frame, f'LINEA ({int(position*100)}%)', (x + 10, 30),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
 
@@ -253,26 +375,42 @@ def session_video():
     return jsonify(info)
 
 
-def process_video_async(filepath, job_id, orientation, position, conf_threshold, video_id):
+def process_video_async(filepath, job_id, orientation, position, conf_threshold, iou_threshold, video_id, cancel_event, pause_event):
+    def frame_callback(frame_bgr):
+        if job_id in job_store:
+            ret, buf = cv2.imencode('.jpg', frame_bgr, [int(cv2.IMWRITE_JPEG_QUALITY), 70])
+            if ret:
+                job_store[job_id]['frame_bytes'] = buf.tobytes()
+
     try:
         counts, duration, entry_counts, exit_counts = vc.process_video(
             video_path=filepath,
             orientation=orientation,
             position=position,
             progress_callback=lambda p: job_store_update(job_id, 'progress', p),
+            frame_callback=frame_callback,
             counts_callback=lambda c: job_store_update(job_id, 'counts', c),
+            cancel_event=cancel_event,
+            pause_event=pause_event,
             video_id=video_id,
             conf_threshold=conf_threshold,
+            iou_threshold=iou_threshold,
         )
 
         video = db.get_video_detail(video_id)
         job_store[job_id]["results"] = video
         job_store[job_id]["progress"] = 100
-        job_store[job_id]["status"] = "done"
+
+        if cancel_event and cancel_event.is_set():
+            if job_id in job_store and job_store[job_id].get('status') != 'cancelled':
+                job_store[job_id]["status"] = "cancelled"
+        else:
+            job_store[job_id]["status"] = "done"
 
     except Exception as e:
-        job_store[job_id]["status"] = "error"
-        job_store[job_id]["error_msg"] = str(e)
+        if job_id in job_store:
+            job_store[job_id]["status"] = "error"
+            job_store[job_id]["error_msg"] = str(e)
         if video_id:
             db.update_video_status(video_id, 'error')
 

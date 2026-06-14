@@ -1,48 +1,56 @@
 {% extends "base.html" %}
-{% block title %}VehicleCounter — Procesando{% endblock %}
+{% block title %}VehicleCounter &mdash; Procesando{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1>Procesando Video</h1>
-    <p>El video se está analizando. Los contadores se actualizan en tiempo real.</p>
+<div class="mb-8 animate-fade-in-up">
+    <h1 class="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">Procesando Video</h1>
+    <p class="mt-2 text-gray-500">El video se esta analizando. Los contadores se actualizan en tiempo real.</p>
 </div>
 
-<div class="dashboard-grid" style="grid-template-columns: 1fr 1fr;">
-    <div class="card" style="animation: fadeInUp 0.4s ease-out;">
-        <h3>Contadores en Vivo</h3>
-        <div style="margin-top: 16px;">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white rounded-2xl border border-gray-200 p-6 animate-fade-in-up">
+        <h3 class="text-lg font-bold text-gray-900 mb-4"><i class="fa-solid fa-chart-simple text-gray-400 mr-2"></i> Contadores en Vivo</h3>
+        <div class="space-y-1">
             {% for vtype in ['car', 'motorcycle', 'bus', 'truck', 'bicycle'] %}
-            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border-color);">
-                <span>{{ {'car':'🚗 Autos','motorcycle':'🏍️ Motos','bus':'🚌 Buses','truck':'🚚 Camiones','bicycle':'🚲 Bicicletas'}.get(vtype, vtype) }}</span>
-                <span id="count_{{ vtype }}" style="font-weight:700; color:var(--accent-primary); font-size:1.1rem;">0</span>
+            <div class="flex justify-between items-center py-2.5 border-b border-gray-100 last:border-b-0">
+                <span class="flex items-center gap-2 text-gray-700 text-sm">
+                    <i class="fa-solid {{ {'car':'fa-car','motorcycle':'fa-motorcycle','bus':'fa-bus','truck':'fa-truck','bicycle':'fa-bicycle'}.get(vtype, 'fa-car') }} text-gray-400"></i>
+                    {{ {'car':'Autos','motorcycle':'Motos','bus':'Buses','truck':'Camiones','bicycle':'Bicicletas'}.get(vtype, vtype) }}
+                </span>
+                <span id="count_{{ vtype }}" class="font-bold text-gray-900 text-lg">0</span>
             </div>
             {% endfor %}
         </div>
-        <div style="margin-top:16px; padding-top:12px; border-top:2px solid var(--border-color);">
-            <div style="display:flex; justify-content:space-between;">
-                <span style="font-weight:600;">Total Vehículos</span>
-                <span id="count_total" style="font-weight:800; color:var(--accent-success); font-size:1.5rem;">0</span>
+
+        <hr class="border-gray-200 my-4">
+
+        <div class="space-y-2">
+            <div class="flex justify-between items-center">
+                <span class="font-bold text-gray-900 text-sm">Total Vehiculos</span>
+                <span id="count_total" class="font-extrabold text-emerald-600 text-2xl">0</span>
             </div>
-            <div style="display:flex; justify-content:space-between; margin-top:8px; padding-top:8px; border-top:1px solid var(--border-color);">
-                <span style="color:var(--accent-success);">⬆ Entrada (Carril 1)</span>
-                <span id="count_entry" style="font-weight:700; color:var(--accent-success);">0</span>
+            <div class="flex justify-between items-center pt-2 border-t border-gray-100">
+                <span class="flex items-center gap-1 text-emerald-600 text-sm font-medium"><i class="fa-solid fa-arrow-up"></i> Entrada (Carril 1)</span>
+                <span id="count_entry" class="font-bold text-emerald-600">0</span>
             </div>
-            <div style="display:flex; justify-content:space-between; margin-top:4px;">
-                <span style="color:var(--accent-danger);">⬇ Salida (Carril 2)</span>
-                <span id="count_exit" style="font-weight:700; color:var(--accent-danger);">0</span>
+            <div class="flex justify-between items-center">
+                <span class="flex items-center gap-1 text-red-600 text-sm font-medium"><i class="fa-solid fa-arrow-down"></i> Salida (Carril 2)</span>
+                <span id="count_exit" class="font-bold text-red-600">0</span>
             </div>
         </div>
     </div>
 
-    <div class="card" style="animation: fadeInUp 0.4s ease-out 0.1s backwards;">
-        <h3>Progreso</h3>
-        <div style="text-align:center; padding:20px 0;">
-            <div id="progressIcon" style="font-size:4rem; margin-bottom:16px;">🔄</div>
-            <div class="progress-bar-container" style="margin-bottom:12px;">
-                <div class="progress-bar-fill" id="progressFill" style="width:0%;"></div>
+    <div class="bg-white rounded-2xl border border-gray-200 p-6 animate-fade-in-up" style="animation-delay:0.1s">
+        <h3 class="text-lg font-bold text-gray-900 mb-4"><i class="fa-solid fa-spinner text-gray-400 mr-2"></i> Progreso</h3>
+        <div class="text-center py-6">
+            <div id="progressIcon" class="text-5xl mb-4 text-gray-300">
+                <i class="fa-solid fa-rotate fa-spin"></i>
             </div>
-            <div id="progressText" style="font-size:1.2rem; font-weight:700; color:var(--accent-primary);">0%</div>
-            <div id="statusMessage" style="margin-top:12px; color:var(--text-secondary);">Iniciando procesamiento...</div>
+            <div class="w-full h-3 bg-gray-100 rounded-full overflow-hidden border border-gray-200 mb-3">
+                <div id="progressFill" class="h-full bg-gray-900 rounded-full transition-all duration-300" style="width:0%;"></div>
+            </div>
+            <div id="progressText" class="text-xl font-bold text-gray-900">0%</div>
+            <div id="statusMessage" class="mt-3 text-sm text-gray-500">Iniciando procesamiento...</div>
         </div>
     </div>
 </div>
@@ -56,8 +64,8 @@
         const data = JSON.parse(event.data);
 
         if (data.status === 'error') {
-            document.getElementById('statusMessage').innerHTML = '❌ Error: ' + (data.error_msg || 'Desconocido');
-            document.getElementById('progressIcon').textContent = '❌';
+            document.getElementById('statusMessage').innerHTML = '<i class="fa-solid fa-times-circle text-red-500"></i> Error: ' + (data.error_msg || 'Desconocido');
+            document.getElementById('progressIcon').innerHTML = '<i class="fa-solid fa-times-circle text-red-500"></i>';
             evtSource.close();
             return;
         }
@@ -69,8 +77,8 @@
         if (data.status === 'done' || data.status === 'results') {
             document.getElementById('progressFill').style.width = '100%';
             document.getElementById('progressText').textContent = '100%';
-            document.getElementById('progressIcon').textContent = '✅';
-            document.getElementById('statusMessage').innerHTML = '✅ Procesamiento completado';
+            document.getElementById('progressIcon').innerHTML = '<i class="fa-solid fa-check-circle text-emerald-500"></i>';
+            document.getElementById('statusMessage').innerHTML = '<i class="fa-solid fa-check-circle text-emerald-500"></i> Procesamiento completado';
             evtSource.close();
             if (resultsVideoId) setTimeout(function() { window.location.href = '/results/' + resultsVideoId; }, 1500);
             return;
@@ -91,7 +99,7 @@
             if (c.total_exit !== undefined) document.getElementById('count_exit').textContent = c.total_exit;
         }
 
-        document.getElementById('statusMessage').innerHTML = '🔄 Procesando... ' + (data.progress || 0) + '%';
+        document.getElementById('statusMessage').innerHTML = '<i class="fa-solid fa-rotate fa-spin"></i> Procesando... ' + (data.progress || 0) + '%';
     };
 
     evtSource.onerror = function() { evtSource.close(); };

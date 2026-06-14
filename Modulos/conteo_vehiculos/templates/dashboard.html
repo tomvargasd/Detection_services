@@ -1,59 +1,65 @@
 {% extends "base.html" %}
-{% block title %}VehicleCounter — Dashboard{% endblock %}
+{% block title %}VehicleCounter &mdash; Dashboard{% endblock %}
 
 {% block content %}
-<div class="page-header flex-between">
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 animate-fade-in-up">
     <div>
-        <h1>Dashboard</h1>
-        <p>Historial completo de videos procesados con desglose de entrada y salida.</p>
+        <h1 class="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">Dashboard</h1>
+        <p class="mt-1 text-gray-500">Historial completo de videos procesados con desglose de entrada y salida.</p>
     </div>
-    <a href="/processing" class="btn btn-primary">🎬 Nuevo análisis</a>
+    <a href="/processing" class="inline-flex items-center gap-2 bg-gray-900 text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-gray-800 transition-colors shadow-md text-sm">
+        <i class="fa-solid fa-plus"></i> Nuevo analisis
+    </a>
 </div>
 
 {% if videos|length > 0 %}
-<div class="table-container" style="animation: fadeInUp 0.4s ease-out;">
-    <table>
+<div class="bg-white rounded-2xl border border-gray-200 overflow-x-auto animate-fade-in-up">
+    <table class="w-full text-sm">
         <thead>
-            <tr>
-                <th>Nombre</th>
-                <th>Estado</th>
-                <th>Línea</th>
-                <th>Confianza</th>
-                <th>Total</th>
-                <th>⬆ Entrada</th>
-                <th>⬇ Salida</th>
-                <th>Fecha</th>
-                <th>Acciones</th>
+            <tr class="bg-gray-900 text-white">
+                <th class="px-4 py-3 text-left font-semibold uppercase tracking-wider text-xs">Nombre</th>
+                <th class="px-4 py-3 text-left font-semibold uppercase tracking-wider text-xs">Estado</th>
+                <th class="px-4 py-3 text-left font-semibold uppercase tracking-wider text-xs">Linea</th>
+                <th class="px-4 py-3 text-center font-semibold uppercase tracking-wider text-xs">Confianza</th>
+                <th class="px-4 py-3 text-center font-semibold uppercase tracking-wider text-xs">Total</th>
+                <th class="px-4 py-3 text-center font-semibold uppercase tracking-wider text-xs"><i class="fa-solid fa-arrow-up text-emerald-400"></i> Entrada</th>
+                <th class="px-4 py-3 text-center font-semibold uppercase tracking-wider text-xs"><i class="fa-solid fa-arrow-down text-red-400"></i> Salida</th>
+                <th class="px-4 py-3 text-left font-semibold uppercase tracking-wider text-xs">Fecha</th>
+                <th class="px-4 py-3 text-center font-semibold uppercase tracking-wider text-xs">Acciones</th>
             </tr>
         </thead>
-        <tbody>
+        <tbody class="divide-y divide-gray-100">
             {% for v in videos %}
-            <tr>
-                <td><strong>{{ v['original_filename'] }}</strong></td>
-                <td>
+            <tr class="hover:bg-gray-50 transition-colors">
+                <td class="px-4 py-3 font-medium">{{ v['original_filename'] }}</td>
+                <td class="px-4 py-3">
                     {% if v['status'] == 'done' %}
-                        <span class="badge badge-success">✅</span>
+                        <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-emerald-50 text-emerald-600"><i class="fa-solid fa-check-circle text-xs"></i></span>
                     {% elif v['status'] == 'processing' %}
-                        <span class="badge badge-warning">🔄</span>
+                        <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-50 text-amber-600"><i class="fa-solid fa-spinner fa-spin text-xs"></i></span>
                     {% elif v['status'] == 'error' %}
-                        <span class="badge badge-danger">❌</span>
+                        <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-red-50 text-red-600"><i class="fa-solid fa-times-circle text-xs"></i></span>
                     {% elif v['status'] == 'cancelled' %}
-                        <span class="badge badge-warning">⏹️</span>
+                        <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-50 text-amber-600"><i class="fa-solid fa-stop-circle text-xs"></i></span>
                     {% else %}
-                        <span class="badge badge-warning">⏳</span>
+                        <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gray-100 text-gray-400"><i class="fa-regular fa-clock text-xs"></i></span>
                     {% endif %}
                 </td>
-                <td class="text-muted">{{ v['line_orientation'][:3].capitalize() }} @ {{ (v['line_position']*100)|int }}%</td>
-                <td class="text-muted">{{ v['conf_threshold'] or 0.35 }}</td>
-                <td><strong>{{ v['total_vehicles'] }}</strong></td>
-                <td style="color:var(--accent-success); font-weight:600;">{{ v['total_entry'] or 0 }}</td>
-                <td style="color:var(--accent-danger); font-weight:600;">{{ v['total_exit'] or 0 }}</td>
-                <td class="text-muted">{{ v['processed_at'][:19] if v['processed_at'] else '-' }}</td>
-                <td>
-                    <div style="display:flex; gap:6px;">
-                        <a href="/results/{{ v['id'] }}" class="btn btn-primary btn-sm">Ver</a>
-                        <form action="/delete_video/{{ v['id'] }}" method="POST" onsubmit="return confirm('¿Eliminar este video?');" style="display:inline;">
-                            <button type="submit" class="btn btn-danger btn-sm">🗑️</button>
+                <td class="px-4 py-3 text-gray-400 text-xs">{{ v['line_orientation'][:3].capitalize() }} @ {{ (v['line_position']*100)|int }}%</td>
+                <td class="px-4 py-3 text-center text-gray-400 text-xs">{{ v['conf_threshold'] or 0.35 }}</td>
+                <td class="px-4 py-3 text-center font-bold">{{ v['total_vehicles'] }}</td>
+                <td class="px-4 py-3 text-center font-semibold text-emerald-600">{{ v['total_entry'] or 0 }}</td>
+                <td class="px-4 py-3 text-center font-semibold text-red-600">{{ v['total_exit'] or 0 }}</td>
+                <td class="px-4 py-3 text-gray-400 text-xs">{{ v['processed_at'][:19] if v['processed_at'] else '-' }}</td>
+                <td class="px-4 py-3 text-center">
+                    <div class="flex items-center justify-center gap-1">
+                        <a href="/results/{{ v['id'] }}" class="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-semibold rounded-lg hover:bg-gray-200 transition-colors">
+                            <i class="fa-solid fa-eye"></i> Ver
+                        </a>
+                        <form action="/delete_video/{{ v['id'] }}" method="POST" onsubmit="return confirm('¿Eliminar este video?');" class="inline">
+                            <button type="submit" class="inline-flex items-center justify-center w-7 h-7 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors">
+                                <i class="fa-solid fa-trash-can text-xs"></i>
+                            </button>
                         </form>
                     </div>
                 </td>
@@ -63,10 +69,12 @@
     </table>
 </div>
 {% else %}
-<div class="empty-state">
-    <div class="empty-icon">📊</div>
-    <p>No hay videos procesados aún.</p>
-    <a href="/processing" class="btn btn-primary">🎬 Ir a procesar</a>
+<div class="text-center py-20 animate-fade-in-up">
+    <i class="fa-solid fa-chart-bar text-6xl text-gray-200 mb-4"></i>
+    <p class="text-gray-400 mb-6">No hay videos procesados aun.</p>
+    <a href="/processing" class="inline-flex items-center gap-2 bg-gray-900 text-white font-semibold px-6 py-3 rounded-xl hover:bg-gray-800 transition-colors shadow-md">
+        <i class="fa-solid fa-play"></i> Ir a procesar
+    </a>
 </div>
 {% endif %}
 {% endblock %}

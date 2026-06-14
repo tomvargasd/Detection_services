@@ -29,8 +29,8 @@ video_previews = {}
 ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv', 'wmv'}
 
 VEHICLE_ICONS = {
-    'car': '🚗', 'motorcycle': '🏍️', 'bus': '🚌',
-    'truck': '🚚', 'bicycle': '🚲',
+    'car': 'fa-car', 'motorcycle': 'fa-motorcycle', 'bus': 'fa-bus',
+    'truck': 'fa-truck', 'bicycle': 'fa-bicycle',
 }
 VEHICLE_LABELS = {
     'car': 'Autos', 'motorcycle': 'Motos', 'bus': 'Buses',

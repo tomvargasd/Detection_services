@@ -1,62 +1,89 @@
 <!doctype html>
 <html lang="es">
-
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Vehicle-Counter{% endblock %}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>{% block title %}VehicleCounter{% endblock %}</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap"
-        rel="stylesheet">
-
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeInDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in-up { animation: fadeInUp 0.5s ease-out both; }
+        .animate-fade-in-down { animation: fadeInDown 0.3s ease-out both; }
+        input[type="range"] { accent-color: #111; }
+    </style>
 </head>
+<body class="bg-gray-50 text-gray-900 antialiased min-h-screen flex flex-col">
 
-<body>
-    <nav class="navbar">
-        <a href="/" class="navbar-brand">
-            <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
-            <span>Vehicle Counter</span>
-        </a>
-
-        <ul class="navbar-nav">
-            <li><a href="/" class="{{ 'active' if request.endpoint == 'index' }}">🏠 Inicio</a></li>
-            <li><a href="/processing" class="{{ 'active' if 'processing' in request.endpoint }}">⚙️ Procesar</a></li>
-            <li><a href="/dashboard" class="{{ 'active' if request.endpoint == 'dashboard' }}">📊 Dashboard</a></li>
-        </ul>
+    <nav class="bg-white border-b border-gray-200 sticky top-0 z-50" id="navbar">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <a href="/" class="flex items-center gap-3 text-gray-900 no-underline">
+                    <i class="fa-solid fa-car text-xl"></i>
+                    <span class="text-xl font-extrabold tracking-wider uppercase">VehicleCounter</span>
+                </a>
+                <button id="navbarToggle" class="sm:hidden p-2 text-gray-500 hover:text-gray-900 cursor-pointer" aria-label="Menu">
+                    <i class="fa-solid fa-bars text-xl"></i>
+                </button>
+                <div id="navbarNav" class="hidden sm:flex items-center gap-1">
+                    <a href="/" class="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors {% if request.endpoint == 'index' %}text-white bg-gray-900{% else %}text-gray-500 hover:text-gray-900 hover:bg-gray-100{% endif %}">
+                        <i class="fa-solid fa-house"></i> Inicio
+                    </a>
+                    <a href="/processing" class="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors {% if 'processing' in request.endpoint %}text-white bg-gray-900{% else %}text-gray-500 hover:text-gray-900 hover:bg-gray-100{% endif %}">
+                        <i class="fa-solid fa-play"></i> Procesar
+                    </a>
+                    <a href="/dashboard" class="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors {% if request.endpoint == 'dashboard' %}text-white bg-gray-900{% else %}text-gray-500 hover:text-gray-900 hover:bg-gray-100{% endif %}">
+                        <i class="fa-solid fa-chart-bar"></i> Dashboard
+                    </a>
+                </div>
+            </div>
+            <div id="mobileMenu" class="hidden sm:hidden pb-3 space-y-1">
+                <a href="/" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium {% if request.endpoint == 'index' %}text-white bg-gray-900{% else %}text-gray-500 hover:text-gray-900 hover:bg-gray-100{% endif %}">
+                    <i class="fa-solid fa-house"></i> Inicio
+                </a>
+                <a href="/processing" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium {% if 'processing' in request.endpoint %}text-white bg-gray-900{% else %}text-gray-500 hover:text-gray-900 hover:bg-gray-100{% endif %}">
+                    <i class="fa-solid fa-play"></i> Procesar
+                </a>
+                <a href="/dashboard" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium {% if request.endpoint == 'dashboard' %}text-white bg-gray-900{% else %}text-gray-500 hover:text-gray-900 hover:bg-gray-100{% endif %}">
+                    <i class="fa-solid fa-chart-bar"></i> Dashboard
+                </a>
+            </div>
+        </div>
     </nav>
 
-    <main class="main-content">
+    <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 w-full">
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
-        {% for category, message in messages %}
-        <div class="alert alert-{{ category }}">
-            {% if category == 'success' %}✅{% elif category == 'error' %}❌{% else %}ℹ️{% endif %}
-            {{ message }}
+        <div class="space-y-3 mb-8">
+            {% for category, message in messages %}
+            <div class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium animate-fade-in-down
+                {% if category == 'success' %}bg-emerald-50 text-emerald-700 border border-emerald-200
+                {% elif category == 'error' %}bg-red-50 text-red-700 border border-red-200
+                {% else %}bg-gray-100 text-gray-700 border border-gray-200{% endif %}">
+                <i class="fa-solid {% if category == 'success' %}fa-check-circle{% elif category == 'error' %}fa-times-circle{% else %}fa-circle-info{% endif %}"></i>
+                {{ message }}
+            </div>
+            {% endfor %}
         </div>
-        {% endfor %}
         {% endif %}
         {% endwith %}
 
         {% block content %}{% endblock %}
-
-        <footer class="footer">
-            <p>VehicleCounter — Conteo de Vehículos con IA &copy; 2026</p>
-        </footer>
     </main>
 
+    <footer class="border-t border-gray-200 py-6 text-center text-sm text-gray-400">
+        <p>VehicleCounter &mdash; Conteo de Vehiculos con IA &copy; 2026</p>
+    </footer>
+
     <script>
-        window.addEventListener('scroll', function () {
-            const navbar = document.getElementById('navbar');
-            if (window.scrollY > 10) navbar.classList.add('scrolled');
-            else navbar.classList.remove('scrolled');
-        });
-        document.getElementById('navbarToggle').addEventListener('click', function () {
-            document.getElementById('navbarNav').classList.toggle('active');
+        document.getElementById('navbarToggle').addEventListener('click', function() {
+            document.getElementById('mobileMenu').classList.toggle('hidden');
         });
     </script>
-
 </body>
-
 </html>
